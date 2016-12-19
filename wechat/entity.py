@@ -3,7 +3,7 @@ import six
 
 from wechat.exceptions import WechatEntityException
 from wechat.fields import BaseField, StrField, IntField
-from wechat.util import sign_str, XMLUtil
+from wechat.util import sign_str, XMLUtil, check_send_success
 
 _SIGN = 'sign'
 
@@ -37,12 +37,23 @@ class BaseEntity(type):
 
 
 class Entity(six.with_metaclass(BaseEntity)):
+    IS_RESPONSE = False
 
-    def from_xml_str(self, xml_str):
-        pass
+    @classmethod
+    def from_xml_str(cls, xml_str):
+        data = XMLUtil.deserializer(xml_str)
+        if cls.IS_RESPONSE:
+            check_send_success(data)
+        obj = cls()
+        for key in data:
+            val = data[key]
+            setattr(obj, key, val)
+        obj.validate(with_sign=True)
+        return obj
 
     def to_xml_str(self, key):
         self.validate()
+        # todo 发送所有字段
         self.sign = sign_str(self, self._REQUIRE_FIELDS, key)
         data = {k: getattr(self, k) for k in self._REQUIRE_FIELDS_WITH_SIGN}
         res = XMLUtil.serializer(data)

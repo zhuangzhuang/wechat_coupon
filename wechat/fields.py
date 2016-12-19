@@ -8,6 +8,8 @@ class BaseField(object):
         self.required = required
         self.example = example
 
+    #todo, add more check
+
 
 class StrField(BaseField):
     name = 'str_field'

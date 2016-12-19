@@ -1,28 +1,74 @@
 #coding: utf8
+import requests
 
 from wechat.consts import COUPON_QUERY_INFO_URL
-from wechat.util import sign_str, check_send_success
+from wechat.entity import Entity
+from wechat.fields import IntField, StrField
 
 
-COUPON_QUERY_INFO_FIELDS = [
-
-]
-
-
-class CouponQueryinfoEntity(object):
-    coupon_id=None    #require str ex:  1565
-    openid=None       #require str ex:  onqOjjrXT-776SpHnfexGm1_P7iE
-    appid=None        #require str(32) ex: wx5edab3bdfba3dc1c
-    mch_id=None       #require str(32) ex: 10000098
-    stock_id=None     #require str(32) ex: 58818
-    op_user_id=None   #no_require str(32) ex: 10000098
-    device_info=None  #no_require str(32) ex:
-    nonce_str=None    #require str(32) ex: 1417574675
-    sign=None         #require str(32) ex: 841B3002FE2220C87A2D08ABD8A8F791
-    version=None      #no_require str(32) ex: 1.0
-    type=None         #no_require str(32) ex: XML`
+class CouponQueryInfoEntity(Entity):
+    coupon_id = StrField(example='1565')
+    openid    = StrField(example='onqOjjrXT-776SpHnfexGm1_P7iE')
+    appid     = StrField(slen=32, example='wx5edab3bdfba3dc1c')
+    mch_id    = StrField(slen=32, example='10000098')
+    stock_id  = StrField(slen=32, example='58818')
+    op_user_id= StrField(slen=32, required=False, example='10000098')
+    device_info=StrField(slen=32, required=False, example='')
+    nonce_str = StrField(slen=32, example='1417574675')
+    sign      = StrField(slen=32, example='841B3002FE2220C87A2D08ABD8A8F791')
+    version   = StrField(slen=32, required=False, example='1.0')
+    type      = StrField(slen=32, required=False, example='XML')
 
 
+class CouponQueryInfoResponseEntity(Entity):
+    IS_RESPONSE = True
+
+    return_code = StrField(example='SUCCESS')
+    return_msg  = StrField(required=False, example='')
+    appid       = StrField(slen=32, example='wx5edab3bdfba3dc1c')
+    mch_id      = StrField(slen=32, example='10000098')
+    sub_mch_id  = StrField(slen=32, required=False, example='10000098')
+    device_info =StrField(slen=32, required=False, example='123456sb')
+    nonce_str   = StrField(slen=32, example='1417574675')
+    sign        = StrField(slen=32, example='841B3002FE2220C87A2D08ABD8A8F791')
+    result_code = StrField(slen=16, example='SUCCESS')
+    err_code    = StrField(slen=32, required=False, example='')
+    err_code_des = StrField(slen=128, required=False, example='')
+    coupon_stock_id   = StrField(example='1567')
+    coupon_stock_type = IntField(example=1)
+    coupon_id         = StrField(example='4242')
+    coupon_value      = IntField(example=4)
+    coupon_mininum    = IntField(example=10)
+    coupon_name       = StrField(example=u'测试代金券')
+    coupon_state      = IntField(example=2)
+    coupon_type       = IntField(example=1)
+    coupon_desc       = StrField(example=u'微信支付-代金券')
+    coupon_use_value  = IntField(example=0)
+    coupon_remain_value= IntField(example=4)
+    begin_time        = StrField(example='1943787483')
+    end_time          = StrField(example='1943787484')
+    send_time         = StrField(example='1943787420')
+    use_time          = StrField(required=False, example='1943787483')
+    trade_no          = StrField(required=False, example='20091227091010')
+    consumer_mch_id   = StrField(required=False, example='10000098')
+    consumer_mch_name = StrField(required=False, example=u'测试商户')
+    consumer_mch_appid= StrField(required=False, example='wx5edab3bdfba3dc1c')
+    send_source       = StrField(example='1')
+    is_partial_use    = StrField(required=False, example='1')
+
+
+class WechatCouponQueryInfo(object):
+    def __init__(self, key, url=None):
+        self.key = key
+        if url is None:
+            url = COUPON_QUERY_INFO_URL
+        self.url = url
+
+    def send(self, entity):
+        data = entity.to_xml(self.key)
+        res = requests.post(self.url, data=data.encode('utf8'), verify=False)
+        res_entity = CouponQueryInfoResponseEntity.from_xml_str(res.content)
+        return res_entity
 
 #------------- doc -----------------
 

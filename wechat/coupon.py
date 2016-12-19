@@ -2,41 +2,47 @@
 import requests
 
 from wechat.consts import COUPON_SEND_URL
-from wechat.util import sign_str, check_send_success
-
-COUPON_XML_TEMPLATE = u'''
-<xml>
-<appid>{appid}</appid>
-<coupon_stock_id>{coupon_stock_id}</coupon_stock_id>
-<mch_id>{mch_id}</mch_id>
-<nonce_str>{nonce_str}</nonce_str>
-<openid>{openid}</openid>
-<openid_count>{openid_count}</openid_count>
-<partner_trade_no>{partner_trade_no}</partner_trade_no>
-<sign>{sign}</sign>
-</xml>
-'''
+from wechat.entity import Entity
+from wechat.fields import IntField, StrField
 
 
-class CouponEntity(object):
-    coupon_stock_id = None  #require str ex: 1757
-    openid_count = 1        #require int ex: 1
-    partner_trade_no = None #require str ex: 1000009820141203515766
-    openid = None           #require str ex: onqOjjrXT-776SpHnfexGm1_P7iE
-    appid = None            #require str(32) ex: wx5edab3bdfba3dc1c
-    mch_id = None           #require str(32) ex:10000098
-    op_user_id = None       #no_require str(32) ex: 10000098
-    device_info = None      #no_require str(32)
-    nonce_str = None        #require str(<32) ex: 1417574675
-    sign = None             #require str(32)  ex: 841B3002FE2220C87A2D08ABD8A8F791
-    version = None          #no_require str(32)
-    type = None             #no_require str(32) ex: xml
+class CouponEntity(Entity):
+    coupon_stock_id  = StrField(example=1757)
+    openid_count     = IntField(example=1)
+    partner_trade_no = StrField(example='1000009820141203515766')
+    openid           = StrField(example='onqOjjrXT-776SpHnfexGm1_P7iE')
+    appid            = StrField(slen=32, example='wx5edab3bdfba3dc1c')
+    mch_id           = StrField(slen=32, example='10000098')
+    op_user_id       = StrField(slen=32, required=False, example='10000098')
+    device_info      = StrField(slen=32, required=False)
+    nonce_str        = StrField(slen=32, example='1417574675')
+    sign             = StrField(slen=32, example='841B3002FE2220C87A2D08ABD8A8F791')
+    version          = StrField(slen=32, required=False)
+    type             = StrField(slen=32, required=False, example='xml')
 
-    def to_xml(self, key):
-        self.sign = sign_str(self, COUPON_FIELDS, key)
-        data = {k: getattr(self, k) for k in COUPON_FIELDS_WITH_SIGN}
-        res = COUPON_XML_TEMPLATE.format(**data)
-        return res
+
+class CouponResponseEntity(Entity):
+    IS_RESPONSE = True
+
+    return_code  = StrField(example='SUCCESS')
+    return_msg   = StrField(required=False, example='')
+    appid        = StrField(slen=32, example='wx5edab3bdfba3dc1c')
+    mch_id       = StrField(slen=32, example='10000098')
+    device_info  = StrField(slen=32, required=False, example='123456sb')
+    nonce_str    = StrField(slen=32, example='1417574675')
+    sign         = StrField(slen=32, example='841B3002FE2220C87A2D08ABD8A8F791')
+    result_code  = StrField(slen=16, example='SUCCESS')
+    err_code     = StrField(slen=32, required=False, example='')
+    err_code_des = StrField(slen=128, required=False, example='')
+    coupon_stock_id = StrField(example='1567')
+    resp_count   = IntField(example=1)
+
+    success_count = IntField(example=1)
+    failed_count  = IntField(example=1)
+    openid        = StrField(example='onqOjjrXT-776SpHnfexGm1_P7iE')
+    ret_code      = StrField(example='SUCCESS')
+    coupon_id     = StrField(example='1870')
+    ret_msg       = StrField(example=u'用户已达领用上限')
 
 
 class WechatCoupon(object):
@@ -50,8 +56,8 @@ class WechatCoupon(object):
     def send(self, entity):
         data = entity.to_xml(self.key)
         res = requests.post(self.url, data=data.encode('utf8'), cert=self.cert, verify=False)
-        check_send_success(res.content)
-        return res
+        res_entity = CouponResponseEntity.from_xml_str(res.content)
+        return res_entity
 
 
 if __name__ == '__main__':
