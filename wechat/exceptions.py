@@ -10,3 +10,7 @@ class WechatXmlException(WechatException):
 
 class WechatResponseException(WechatException):
     pass
+
+
+class WechatEntityException(WechatException):
+    pass

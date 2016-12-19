@@ -4,22 +4,6 @@ import requests
 from wechat.consts import COUPON_SEND_URL
 from wechat.util import sign_str, check_send_success
 
-COUPON_FIELDS = [
-    'appid',
-    'coupon_stock_id',
-    'mch_id',
-    'nonce_str',
-    'openid',
-    'openid_count',
-    'partner_trade_no'
-]
-
-COUPON_FIELDS.sort()
-
-COUPON_FIELDS_WITH_SIGN = COUPON_FIELDS[:]
-COUPON_FIELDS_WITH_SIGN.append('sign')
-
-
 COUPON_XML_TEMPLATE = u'''
 <xml>
 <appid>{appid}</appid>
