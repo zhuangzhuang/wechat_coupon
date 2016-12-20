@@ -2,13 +2,21 @@
 
 import hashlib
 import socket
+import datetime
+import string
+import random
+import json
 from xml.dom.minidom import parseString, getDOMImplementation, Node
 from xml.parsers.expat import ExpatError
 
 
 from wechat.exceptions import WechatXmlException, WechatResponseException
 
+noise_sample_with_letter = string.letters + string.digits
+noise_sample_number = string.digits
+
 SUCCESS = 'SUCCESS'
+
 
 def to_partial_sign_str(entity, fields):
     temp_lst = [u"{field}={value}".format(field=field, value=getattr(entity, field)) for field in fields]
@@ -16,6 +24,9 @@ def to_partial_sign_str(entity, fields):
 
 
 def sign_str(entity, fields, key):
+    '''
+    doc: https://pay.weixin.qq.com/wiki/doc/api/tools/sp_coupon.php?chapter=4_3
+    '''
     tmp_str = to_partial_sign_str(entity, fields) + u'&key={key}'.format(key=key)
     m = hashlib.md5()
     m.update(tmp_str.encode('utf8'))
@@ -29,14 +40,18 @@ def get_ip():
 
 
 def check_send_success(data):
+    data_str = json.dumps(data)
     if 'result_code' not in data:
-        raise WechatXmlException(u'xml中未发现 result_code')
+        raise WechatXmlException(u'xml中未发现 result_code -- %s' % data_str)
     result_code = data['result_code']
     if result_code == 'SUCCESS':
         return True
-    if 'err_code_des' not in data:
-        raise WechatXmlException(u'xml 中未发现 err_code_des')
-    raise WechatResponseException(data['err_code_des'])
+    for e in ('err_code', 'err_code_des'):
+        if e not in data:
+            raise WechatXmlException(u'xml 中未发现 字段 %s -- %s' % (e, data_str))
+    err_code = data['err_code']
+    err_code_desc = data['err_code_des']
+    raise WechatResponseException(u'err_code:%s, err_code_desc:%s -- %s'% (err_code, err_code_desc, data_str))
 
 
 def getText(nodelist):
@@ -86,6 +101,28 @@ class XMLUtil(object):
             raise WechatXmlException(u'解析xml错误:' + e.message)
 
 
+def gen_noise_str(slen=10, only_number=True):
+    if only_number:
+        sample = noise_sample_number
+    else:
+        sample = noise_sample_with_letter
+
+    res = []
+    for _ in range(slen):
+        r = random.choice(sample)
+        res.append(r)
+    return ''.join(res)
+
+
+def gen_partner_trade_no(mch_id, day=None, no=None):
+    if day is None:
+        day = datetime.datetime.now()
+    day_str = day.strftime('%Y%m%d')
+    if no is None:
+        no = gen_noise_str(8)
+    return ''.join([str(mch_id), day_str, no])
+
+
 if __name__ == '__main__':
     xml_str = XMLUtil.serializer({'sign': 'xx', 'nono':'vv'})
     # print(xml_str)
@@ -108,5 +145,22 @@ if __name__ == '__main__':
     </xml>
     '''
     data = XMLUtil.deserializer(__RECEIVE_SAMPLE)
-    print(data)
-    print(check_send_success(data))
+    # print(data)
+    # print(check_send_success(data))
+
+    # print(gen_noise_str())
+    # print (gen_partner_trade_no(10000098))
+    class TestEntity:
+        appid = 'wxd930ea5d5a258f4f'
+        mch_id = 10000100
+        device_info= 1000
+        body = 'test'
+        nonce_str = 'ibuaiVcKdpRxkhJA'
+    key = '192006250b4c09247ec02edce69f6a2d'
+    fields = ['appid', 'mch_id', 'device_info', 'body', 'nonce_str']
+    fields.sort()
+
+    res = sign_str(TestEntity, fields, key)
+    print(res)
+
+

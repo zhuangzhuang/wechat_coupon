@@ -42,7 +42,7 @@ class CouponResponseEntity(Entity):
     openid        = StrField(example='onqOjjrXT-776SpHnfexGm1_P7iE')
     ret_code      = StrField(example='SUCCESS')
     coupon_id     = StrField(example='1870')
-    ret_msg       = StrField(example=u'用户已达领用上限')
+    ret_msg       = StrField(required=False, example=u'用户已达领用上限')
 
 
 class WechatCoupon(object):
@@ -54,7 +54,7 @@ class WechatCoupon(object):
         self.url = url
 
     def send(self, entity):
-        data = entity.to_xml(self.key)
+        data = entity.to_xml_str(self.key)
         res = requests.post(self.url, data=data.encode('utf8'), cert=self.cert, verify=False)
         res_entity = CouponResponseEntity.from_xml_str(res.content)
         return res_entity
@@ -62,7 +62,7 @@ class WechatCoupon(object):
 
 if __name__ == '__main__':
     from datetime import datetime
-
+    from util import gen_partner_trade_no, gen_noise_str
     class Billno(object):
         def __init__(self, mch_id):
             self.mch_id = mch_id
@@ -74,6 +74,27 @@ if __name__ == '__main__':
             no = '%s%s%.10d' % (self.mch_id, date_str, self.next_num)
             self.next_num += 1
             return no
+
+    from test.config import Config
+
+    entity = CouponEntity()
+    mch_id = Config.mch_id
+    entity.coupon_stock_id = Config.coupon_stock_id
+    entity.openid_count = 1
+    entity.partner_trade_no = gen_partner_trade_no(mch_id)
+    entity.openid = Config.openid
+    entity.appid = Config.app_id
+    entity.mch_id = mch_id
+    entity.nonce_str = gen_noise_str()
+
+    coupon = WechatCoupon(key=Config.api_key, cert=Config.cert_pair)
+    res = coupon.send(entity)
+    print(res)
+
+
+
+
+
 
 
 #------------- doc -----------------

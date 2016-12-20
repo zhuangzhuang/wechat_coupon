@@ -30,7 +30,7 @@ class CouponQueryInfoResponseEntity(Entity):
     sub_mch_id  = StrField(slen=32, required=False, example='10000098')
     device_info =StrField(slen=32, required=False, example='123456sb')
     nonce_str   = StrField(slen=32, example='1417574675')
-    sign        = StrField(slen=32, example='841B3002FE2220C87A2D08ABD8A8F791')
+    sign        = StrField(slen=32, required=False, example='841B3002FE2220C87A2D08ABD8A8F791') #?? 实际测试字段没有
     result_code = StrField(slen=16, example='SUCCESS')
     err_code    = StrField(slen=32, required=False, example='')
     err_code_des = StrField(slen=128, required=False, example='')
@@ -38,7 +38,7 @@ class CouponQueryInfoResponseEntity(Entity):
     coupon_stock_type = IntField(example=1)
     coupon_id         = StrField(example='4242')
     coupon_value      = IntField(example=4)
-    coupon_mininum    = IntField(example=10)
+    coupon_mininum    = IntField(required=False, example=10) #?? 实际测试字段是 coupon_minimum
     coupon_name       = StrField(example=u'测试代金券')
     coupon_state      = IntField(example=2)
     coupon_type       = IntField(example=1)
@@ -65,10 +65,27 @@ class WechatCouponQueryInfo(object):
         self.url = url
 
     def send(self, entity):
-        data = entity.to_xml(self.key)
+        data = entity.to_xml_str(self.key)
         res = requests.post(self.url, data=data.encode('utf8'), verify=False)
         res_entity = CouponQueryInfoResponseEntity.from_xml_str(res.content)
         return res_entity
+
+
+if __name__ == '__main__':
+    from test.config import Config
+    from util import gen_noise_str
+    queryInfoEntity = CouponQueryInfoEntity()
+    queryInfoEntity.coupon_id = '1077223085'
+    queryInfoEntity.openid = Config.openid
+    queryInfoEntity.appid = Config.app_id
+    queryInfoEntity.mch_id = Config.mch_id
+    queryInfoEntity.stock_id =Config.coupon_stock_id
+    queryInfoEntity.nonce_str = gen_noise_str()
+
+    queryInfo = WechatCouponQueryInfo(key=Config.api_key)
+    res = queryInfo.send(entity=queryInfoEntity)
+    print(res)
+
 
 #------------- doc -----------------
 

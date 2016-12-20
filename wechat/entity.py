@@ -1,5 +1,6 @@
 #coding: utf8
 import six
+import json
 
 from wechat.exceptions import WechatEntityException
 from wechat.fields import BaseField, StrField, IntField
@@ -26,6 +27,7 @@ class BaseEntity(type):
             value = fields[field]
             if value.required and field != _SIGN:
                 required_fields.append(field)
+            setattr(new_class, field, value.default)
         required_fields_with_sign = required_fields[:] + [_SIGN]
         all_fields = fields.keys()
         required_fields.sort()
@@ -48,7 +50,7 @@ class Entity(six.with_metaclass(BaseEntity)):
         for key in data:
             val = data[key]
             setattr(obj, key, val)
-        obj.validate(with_sign=True)
+        obj.validate(with_sign=False) #??
         return obj
 
     def to_xml_str(self, key):
@@ -63,8 +65,18 @@ class Entity(six.with_metaclass(BaseEntity)):
         validate_field = self._REQUIRE_FIELDS_WITH_SIGN if with_sign else self._REQUIRE_FIELDS
         for filed in validate_field:
             value = getattr(self, filed)
-            if not value:
-                raise WechatEntityException('require field %s', filed)
+            if value is None:
+                data = self.to_data()
+                data_str = json.dumps(data)
+                raise WechatEntityException('require field %s -- %s'%(filed, data_str))
+
+    def to_data(self):
+        data = {}
+        for f in self._ALL_FIELDS:
+            val = getattr(self, f, None)
+            if val is not None:
+                data[f] = val
+        return data
 
 
 if __name__ == '__main__':

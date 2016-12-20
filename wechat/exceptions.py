@@ -1,5 +1,6 @@
 #coding: utf8
 
+
 class WechatException(Exception):
     pass
 
